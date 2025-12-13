@@ -12,26 +12,20 @@ public class Batman : MonoBehaviour
     public float normalSpeed = 5f;
     public float runSpeed = 10f;
 
-    [HideInInspector] public UIManager uiManager;
     [HideInInspector] public float currentSpeed;
 
     private IBatmanState _currentState;
 
     private void Start()
     {
-        uiManager = GameObject.Find("Canvas").GetComponent<UIManager>();
         ChangeState(new NormalState(this));
     }
 
     private void Update()
     {
         HandleMovement();
+        HandleGlobalInput();
         _currentState.Update();
-
-        if (Input.GetKeyDown(KeyCode.B))
-        {
-            uiManager.ToggleBatSignal();
-        }
     }
 
     public void ChangeState(IBatmanState newState)
@@ -41,13 +35,21 @@ public class Batman : MonoBehaviour
         _currentState.Enter();
     }
 
-    void HandleMovement()
+    private void HandleMovement()
     {
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
 
         Vector3 move = new Vector3(h, v, 0);
         transform.Translate(move * currentSpeed * Time.deltaTime, Space.World);
+    }
+
+    private void HandleGlobalInput()
+    {
+        if (Input.GetKeyDown(KeyCode.B))
+        {
+            EventBus.Publish(new BatSignalToggleEvent());
+        }
     }
 }
 
@@ -63,8 +65,9 @@ public class NormalState : IBatmanState
     public void Enter()
     {
         _batman.currentSpeed = _batman.normalSpeed;
-        _batman.uiManager.StopAlert();
-        _batman.uiManager.ResetObejctOpacity();
+
+        EventBus.Publish(new AlertStoppedEvent());
+        EventBus.Publish(new OpacityChangedEvent(1f));
     }
 
     public void Update()
@@ -91,8 +94,9 @@ public class StealthState : IBatmanState
     public void Enter()
     {
         _batman.currentSpeed = _batman.normalSpeed * 0.5f;
-        _batman.uiManager.StopAlert();
-        _batman.uiManager.SetObjectOpacity(0.7f);
+
+        EventBus.Publish(new AlertStoppedEvent());
+        EventBus.Publish(new OpacityChangedEvent(0.7f));
     }
 
     public void Update()
@@ -119,8 +123,9 @@ public class AlertState : IBatmanState
     public void Enter()
     {
         _batman.currentSpeed = _batman.runSpeed;
-        _batman.uiManager.StartAlert();
-        _batman.uiManager.ResetObejctOpacity();
+
+        EventBus.Publish(new AlertStartedEvent());
+        EventBus.Publish(new OpacityChangedEvent(1f));
     }
 
     public void Update()
@@ -134,6 +139,6 @@ public class AlertState : IBatmanState
 
     public void Exit()
     {
-        _batman.uiManager.StopAlert();
+        EventBus.Publish(new AlertStoppedEvent());
     }
 }
