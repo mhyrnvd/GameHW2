@@ -1,72 +1,139 @@
 using UnityEngine;
 
-enum BatmanState { Normal, Stealth, Alert }
+public interface IBatmanState
+{
+    void Enter();
+    void Update();
+    void Exit();
+}
 
 public class Batman : MonoBehaviour
 {
-    private UIManager _uiManager;
-    private BatmanState _currentState = BatmanState.Normal;
-
     public float normalSpeed = 5f;
     public float runSpeed = 10f;
 
+    [HideInInspector] public UIManager uiManager;
+    [HideInInspector] public float currentSpeed;
+
+    private IBatmanState _currentState;
+
     private void Start()
     {
-        _uiManager = GameObject.Find("Canvas").GetComponent<UIManager>();
-        if (_uiManager == null)
-            Debug.LogError("The UI Manager is NULL");
+        uiManager = GameObject.Find("Canvas").GetComponent<UIManager>();
+        ChangeState(new NormalState(this));
     }
 
-    void Update()
+    private void Update()
     {
         HandleMovement();
-        HandleStateInput();
+        _currentState.Update();
+
+        if (Input.GetKeyDown(KeyCode.B))
+        {
+            uiManager.ToggleBatSignal();
+        }
+    }
+
+    public void ChangeState(IBatmanState newState)
+    {
+        _currentState?.Exit();
+        _currentState = newState;
+        _currentState.Enter();
     }
 
     void HandleMovement()
     {
-        float horizontal = Input.GetAxis("Horizontal");
-        float vertical = Input.GetAxis("Vertical");
+        float h = Input.GetAxis("Horizontal");
+        float v = Input.GetAxis("Vertical");
 
-        float currentSpeed = normalSpeed;
-
-        if (_currentState == BatmanState.Stealth)
-            currentSpeed = normalSpeed * 0.5f;
-
-        if (Input.GetKey(KeyCode.LeftShift) && _currentState != BatmanState.Stealth)
-            currentSpeed = runSpeed;
-
-        Vector3 move = new Vector3(horizontal, vertical, 0);
+        Vector3 move = new Vector3(h, v, 0);
         transform.Translate(move * currentSpeed * Time.deltaTime, Space.World);
     }
+}
 
-    void HandleStateInput()
+public class NormalState : IBatmanState
+{
+    private Batman _batman;
+
+    public NormalState(Batman batman)
     {
-        if (Input.GetKeyDown(KeyCode.N))
-        {
-            _currentState = BatmanState.Normal;
-            _uiManager.StopAlert();
-            _uiManager.ResetObejctOpacity();
-        }
-
-        if (Input.GetKeyDown(KeyCode.C))
-        {
-            _currentState = BatmanState.Stealth;
-            _uiManager.StopAlert();
-            _uiManager.SetObjectOpacity(0.7f);
-        }
-
-        if (Input.GetKeyDown(KeyCode.Space))
-        {
-            _currentState = BatmanState.Alert;
-            _uiManager.StartAlert();
-            _uiManager.ResetObejctOpacity();
-        }
-
-        if (Input.GetKeyDown(KeyCode.B))
-        {
-            _uiManager.ToggleBatSignal();
-        }
+        _batman = batman;
     }
 
+    public void Enter()
+    {
+        _batman.currentSpeed = _batman.normalSpeed;
+        _batman.uiManager.StopAlert();
+        _batman.uiManager.ResetObejctOpacity();
+    }
+
+    public void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.C))
+            _batman.ChangeState(new StealthState(_batman));
+
+        if (Input.GetKeyDown(KeyCode.Space))
+            _batman.ChangeState(new AlertState(_batman));
+    }
+
+    public void Exit() { }
+}
+
+public class StealthState : IBatmanState
+{
+    private Batman _batman;
+
+    public StealthState(Batman batman)
+    {
+        _batman = batman;
+    }
+
+    public void Enter()
+    {
+        _batman.currentSpeed = _batman.normalSpeed * 0.5f;
+        _batman.uiManager.StopAlert();
+        _batman.uiManager.SetObjectOpacity(0.7f);
+    }
+
+    public void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.N))
+            _batman.ChangeState(new NormalState(_batman));
+
+        if (Input.GetKeyDown(KeyCode.Space))
+            _batman.ChangeState(new AlertState(_batman));
+    }
+
+    public void Exit() { }
+}
+
+public class AlertState : IBatmanState
+{
+    private Batman _batman;
+
+    public AlertState(Batman batman)
+    {
+        _batman = batman;
+    }
+
+    public void Enter()
+    {
+        _batman.currentSpeed = _batman.runSpeed;
+        _batman.uiManager.StartAlert();
+        _batman.uiManager.ResetObejctOpacity();
+    }
+
+    public void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.N))
+            _batman.ChangeState(new NormalState(_batman));
+
+        if (Input.GetKeyDown(KeyCode.C))
+            _batman.ChangeState(new StealthState(_batman));
+    }
+
+    public void Exit()
+    {
+        _batman.uiManager.StopAlert();
+    }
 }
