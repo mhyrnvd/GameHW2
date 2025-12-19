@@ -1,14 +1,18 @@
-using Unity.VisualScripting;
 using UnityEngine;
 
+/// <summary>
+/// Manages UI visuals, alarms, audio, and Bat-Signal effects.
+/// </summary>
 public class UIManager : MonoBehaviour
 {
+    /// <summary>UI and scene prefabs.</summary>
     [Header("Prefabs")]
     [SerializeField] private GameObject RedAlarmPrefab;
     [SerializeField] private GameObject GothamCity;
     [SerializeField] private GameObject BatmanPrefab;
     [SerializeField] private GameObject BatSignalPrefab;
 
+    /// <summary>Alert audio source.</summary>
     [Header("Audio")]
     [SerializeField] private AudioSource alertAudio;
 
@@ -24,6 +28,7 @@ public class UIManager : MonoBehaviour
     private float _rotationAmount = 5f;
     private float _rotationSpeed = 1f;
 
+    /// <summary>Initializes sprite references.</summary>
     private void Awake()
     {
         _batmanSprite = BatmanPrefab.GetComponent<SpriteRenderer>();
@@ -31,6 +36,7 @@ public class UIManager : MonoBehaviour
         _batSignalSprite = BatSignalPrefab.GetComponent<SpriteRenderer>();
     }
 
+    /// <summary>Subscribes to game events.</summary>
     private void OnEnable()
     {
         EventBus.Subscribe<AlertStartedEvent>(OnAlertStarted);
@@ -39,6 +45,7 @@ public class UIManager : MonoBehaviour
         EventBus.Subscribe<OpacityChangedEvent>(OnOpacityChanged);
     }
 
+    /// <summary>Unsubscribes from game events.</summary>
     private void OnDisable()
     {
         EventBus.Unsubscribe<AlertStartedEvent>(OnAlertStarted);
@@ -47,25 +54,25 @@ public class UIManager : MonoBehaviour
         EventBus.Unsubscribe<OpacityChangedEvent>(OnOpacityChanged);
     }
 
+    /// <summary>Updates alarm blinking and Bat-Signal rotation.</summary>
     private void Update()
     {
         HandleAlarmBlink();
         HandleBatSignalRotation();
     }
 
-    // ================= ALERT =================
-
+    /// <summary>Activates alarm visuals and sound.</summary>
     private void OnAlertStarted(AlertStartedEvent e)
     {
         _alertActive = true;
         RedAlarmPrefab.SetActive(true);
-
         SetOpacity(1f);
 
         if (!alertAudio.isPlaying)
             alertAudio.Play();
     }
 
+    /// <summary>Stops alarm visuals and sound.</summary>
     private void OnAlertStopped(AlertStoppedEvent e)
     {
         _alertActive = false;
@@ -75,11 +82,13 @@ public class UIManager : MonoBehaviour
             alertAudio.Stop();
     }
 
+    /// <summary>Updates sprite opacity.</summary>
     private void OnOpacityChanged(OpacityChangedEvent e)
     {
         SetOpacity(e.Alpha);
     }
 
+    /// <summary>Creates blinking effect for alarm.</summary>
     private void HandleAlarmBlink()
     {
         if (!_alertActive) return;
@@ -93,13 +102,13 @@ public class UIManager : MonoBehaviour
         }
     }
 
-    // ================= BAT SIGNAL =================
-
+    /// <summary>Toggles Bat-Signal visibility.</summary>
     private void OnBatSignalToggle(BatSignalToggleEvent e)
     {
         BatSignalPrefab.SetActive(!BatSignalPrefab.activeSelf);
     }
 
+    /// <summary>Rotates Bat-Signal light.</summary>
     private void HandleBatSignalRotation()
     {
         if (!BatSignalPrefab.activeSelf) return;
@@ -111,8 +120,7 @@ public class UIManager : MonoBehaviour
             Quaternion.Euler(0f, 0f, angle);
     }
 
-    // ================= OPACITY =================
-
+    /// <summary>Applies opacity to all relevant sprites.</summary>
     private void SetOpacity(float alpha)
     {
         if (_batmanSprite != null)
@@ -125,6 +133,7 @@ public class UIManager : MonoBehaviour
             SetSpriteAlpha(_batSignalSprite, alpha);
     }
 
+    /// <summary>Sets alpha value of a sprite.</summary>
     private void SetSpriteAlpha(SpriteRenderer sr, float alpha)
     {
         Color c = sr.color;
