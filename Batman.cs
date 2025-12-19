@@ -10,9 +10,12 @@ public interface IBatmanState
 public class Batman : MonoBehaviour
 {
     public float normalSpeed = 5f;
-    public float runSpeed = 10f;
 
     [HideInInspector] public float currentSpeed;
+    [SerializeField] private GameObject _batMobile;
+    public float batMobileSpeedMultiplier = 2f;
+
+    private bool _isInBatMobile = false;
 
     private IBatmanState _currentState;
 
@@ -40,15 +43,43 @@ public class Batman : MonoBehaviour
         float h = Input.GetAxis("Horizontal");
         float v = Input.GetAxis("Vertical");
 
-        Vector3 move = new Vector3(h, v, 0);
-        transform.Translate(move * currentSpeed * Time.deltaTime, Space.World);
+        float speed = currentSpeed;
+
+        if (Input.GetKey(KeyCode.LeftShift) || Input.GetKey(KeyCode.RightShift))
+        {
+            speed *= 1.5f;
+        }
+
+        Vector3 move = new(h, v, 0);
+        transform.Translate(speed * Time.deltaTime * move, Space.World);
     }
 
     private void HandleGlobalInput()
     {
+        if (Input.GetKeyDown(KeyCode.E))
+        {
+            ToggleBatMobile();
+        }
+
         if (Input.GetKeyDown(KeyCode.B))
         {
             EventBus.Publish(new BatSignalToggleEvent());
+        }
+    }
+
+    private void ToggleBatMobile()
+    {
+        _isInBatMobile = !_isInBatMobile;
+
+        _batMobile.SetActive(_isInBatMobile);
+
+        if (_isInBatMobile)
+        {
+            currentSpeed *= batMobileSpeedMultiplier;
+        }
+        else
+        {
+            currentSpeed = normalSpeed;
         }
     }
 }
@@ -122,8 +153,6 @@ public class AlertState : IBatmanState
 
     public void Enter()
     {
-        _batman.currentSpeed = _batman.runSpeed;
-
         EventBus.Publish(new AlertStartedEvent());
         EventBus.Publish(new OpacityChangedEvent(1f));
     }
